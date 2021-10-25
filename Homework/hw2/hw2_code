@@ -1,0 +1,535 @@
+clear
+trap "" 2 3
+
+
+x=`expr $LINES / 2`
+y=`expr $COLUMNS / 2`
+xoffset=
+nowX=
+nowY=
+hint="Enter to continue...>"
+
+moveCursor(){
+	nowX=`expr $x - $xoffset`
+	let xoffset=xoffset-1
+
+	str=$*
+	nowY=`expr $y - ${#str} / 2`
+
+	tput cup $nowX $nowY
+}
+
+showMSO(){
+	tput smso
+	echo -n $@
+	tput rmso
+}
+
+fileCheck(){
+	echo "Checking Files..."
+
+	if [ -f std -a -f admin -a -f aCourse -a -f sCourse ]
+	then
+		echo "Done."	
+	else
+		echo "Error: Files Missing."
+		clear
+		exit 1
+	fi
+}
+
+welcome(){
+	clear
+
+	stty -echo
+	tput civis
+	xoffset=1
+	txt1="Welcome to Trash UIMS!"
+	txt2="Press Any Key to Continue..."
+	moveCursor $txt1
+	echo $txt1
+	moveCursor $txt2
+	echo $txt2
+	moveCursor ""
+	read -n 1
+	tput cnorm
+	stty echo
+}
+	
+
+repaint(){
+	clear
+	xoffset=3
+
+	title="Linux2021 project2: Trash UIMS"
+	name="Main Menu"
+	author="VV Cheng"
+
+	moveCursor "$title"
+	echo "$title"
+
+	moveCursor $author
+	echo $author
+
+	moveCursor "$name"
+	showMSO $name #highlight
+	echo
+	echo
+	let xoffset=xoffset-1
+
+	info1="Press 0:"
+	type1="Exit"
+	info2="Press 1:"
+	type2="Student"
+	info3="Press 2:"
+	type3="Admin"
+	extra="Menu"
+	
+	moveCursor "$info1$type1"
+	echo -n "$info1 "
+	showMSO "$type1"
+	
+	moveCursor "$info2$type2 Menu"
+	echo -n "$info2 "
+	showMSO "$type2"
+	echo " Menu"
+
+	moveCursor "$info3$type3 Menu"
+	echo -n "$info3 "
+	showMSO "$type3"
+	echo " Menu"
+	
+	echo
+	let xoffset=xoffset-1
+}
+
+mainMenu() {
+	while [ 1 -eq 1 ]
+	do
+		repaint
+		echo -n $hint
+		read choice
+		case $choice in
+			0) clear;exit 0;;
+			1) Login std;;
+			2) Login admin;;
+			*) echo "Wrong Input, Try Again.";echo;;
+		esac
+	done
+}
+
+Login(){
+	clear
+	tput cup 0 0
+	
+	while [ 1 -eq 1 ]
+	do 
+		echo "User name, -1 to quit..."
+		read usr
+		
+		if [ $usr = "-1" ]
+		then
+			return
+		fi
+	
+		echo "Password..."
+		read passwd
+
+		if [ `grep "$usr:$passwd$" $1 | wc -l` -ne "0" ]
+		then
+			if [ "$1" == "std" ]
+			then
+				Student $usr
+			else
+				Admin
+			fi
+
+			return
+		else
+			echo "Error usr or password. Retry."
+			echo
+		fi
+	done
+}
+
+StudentRepaint(){
+	clear
+	xoffset=3
+
+	title="Student Menu"
+	moveCursor $title
+	showMSO $title
+	echo
+
+	echo
+	let xoffset=xoffset-1
+
+	info1="Press 0: "
+	info2="Press 1: "
+	info3="Press 2: "
+	option1="Return"
+	option2="Select"
+	option3="Drop"
+
+	moveCursor "$info1 $option1"
+	echo -n "$info1"
+	showMSO " $option1"
+	echo
+
+	moveCursor "$info2 $option2 course"
+	echo -n "$info2"
+	showMSO " $option2"
+	echo " course"
+
+	moveCursor "$info3 $option3 course"
+	echo -n "$info3"
+	showMSO " $option3"
+	echo " course"
+}
+Student(){	
+	while [ 1 ]
+	do
+		StudentRepaint 
+		echo -n $hint
+		read choice
+		
+		case $choice in
+			0) return;;
+			1) sel $1;;
+			2) drop $1;;
+			*) echo "Illegal input. Try Again.";echo;; 
+		esac
+	done
+}
+
+listCurCourse(){
+	cids=`grep $1 sCourse | sort -n -k 2 |cut --delimiter=" " -f2`
+	for cid in $cids
+	do 
+		grep $cid aCourse
+	done
+}
+
+listAllCourse(){
+	echo "All courses are listed below:"
+	cat <aCourse
+}
+
+drop(){
+	clear
+	tput cup 0 0
+	
+	echo "Selected course(s) of $1 is listed below:"
+	listCurCourse $1
+	echo
+
+	while [ 1 ]
+	do
+		echo -n "Enter course id to drop course, -1 to exit:"
+		read cid
+	
+		if [ $cid = "-1" ]
+		then
+			return
+		fi
+
+		if [ ${#cid} -ne 4 -o `grep "$1 $cid" sCourse | wc -l` -eq "0" ] #do not exist cid
+		then
+			echo "Illegal course id or course not selected. Try Again."
+			echo
+			continue
+		fi
+		
+		echo "Sure to drop course $cid?(y/n)"
+		read cfm
+
+		if [ $cfm = "y" ]
+		then 
+			sed -i "/$1 $cid/d" sCourse
+			echo "Drop successfully. Now your course(s) are:"
+			listCurCourse $1
+			echo
+		else
+			echo "Drop cancelled."
+			echo
+		fi
+	done
+}
+
+sel(){
+	clear
+	listAllCourse
+	echo
+	
+	while [ 1 ]
+	do
+		echo -n "Enter course id to select course and -1 to exit:"
+		read cid
+		if [ "$cid" = "-1" ]
+		then
+			return
+		fi 
+		
+		if [ ${#cid} -ne 4 -o `grep "$cid" aCourse | wc -l` -eq 0 ] #illegal cid
+		then
+			echo "Illegal course id. Try again."
+			echo
+			continue
+		fi
+
+		if [ `grep "$usr $cid" sCourse | wc -l` -eq 0 ] #new course
+		then
+			echo "$usr $cid" | cat >>sCourse
+		else
+			echo "Already selected. Try another."
+			echo
+		fi
+	done
+}
+
+AdminRepaint(){
+	clear
+	xoffset=3
+
+	title="Admin Menu"
+	moveCursor $title
+	showMSO $title
+	echo
+	
+	echo
+	let xoffset=xoffset-1
+	
+	info1="Press 0:"
+	info2="Press 1:"
+	info3="Press 2:"
+	info4="Press 3:"
+	info5="Press 4:"
+	option1="Return"
+	option2="Add"
+	option3="Delete"
+	option4="Add"
+	option5="Delete"
+
+	moveCursor "$info1 $option1"
+	echo -n "$info1"
+	showMSO " $option1"
+	echo
+	
+	moveCursor "$info2 $option2 Student"
+	echo -n "$info2"
+	showMSO " $option2"
+	echo -n " Student"
+	echo
+
+	moveCursor "$info3 $option3 Student"
+	echo -n "$info3"
+	showMSO " $option3"
+	echo -n " Student"
+	echo
+
+	moveCursor "$info4 $option4 Course"
+	echo -n "$info4"
+	showMSO " $option4"
+	echo -n " Course"
+	echo 
+
+	moveCursor "$info5 $option5 Course"
+	echo -n "$info5"
+	showMSO " $option5"
+	echo -n " Course"
+	echo
+}
+
+Admin(){
+	while [ 1 ]
+	do
+		AdminRepaint
+		echo -n $hint
+		read choice
+
+		case $choice in
+			0) return;;
+			1) adds;;
+			2) dels;;
+			3) addc;;
+			4) delc;;
+			*) echo "Illegal Input. Try Again";echo;;	
+		esac
+	done
+}
+
+addc(){
+	clear
+	tput cup 0 0
+	
+	while [ 1 ]
+	do
+		echo "Enter course name and course id..."
+		echo "Enter 0 0 to exit"
+		read cname cid
+		if [ "$cname" = "0" -a "$cid" = "0" ]
+		then
+			return
+		elif [ "$cname" = "" -o "$cid" = "" ]
+		then
+			echo "Not enough arguments. Try again."
+			echo
+			continue
+		elif [ `grep "$cname" aCourse | wc -l` -ne 0 -o `grep "$cid" aCourse | wc -l` -ne 0 ]
+		then
+			echo "Duplicated course name or course id. Try again."
+			echo
+			continue
+		fi
+		
+		echo "$cname $cid" | cat >> aCourse
+		echo "Course added successfully"
+		echo
+	done
+}
+
+delc(){
+	clear
+	tput cup 0 0
+
+	while [ 1 ]
+	do
+		echo "Enter course id to delete, 0 to quit, -1 to show all course(s)..."
+		read cid
+
+		if [ "$cid" = "" ]
+		then
+			echo "Course id can't be empty. Try again."
+			echo
+			continue
+		elif [ "$cid" = "0" ]
+		then
+			return
+		elif [ "$cid" = "-1" ]
+		then
+			echo "All course(s):"
+			cat < aCourse | sort -n -k 2
+			echo
+			continue
+		elif [ `grep -w "$cid *" aCourse | wc -l` -eq 0 ]
+		then
+			echo "Course id do not exist. Try again."
+			echo
+			continue
+		fi
+
+		echo -n "Confirm to delete course `grep -w "$cid *" aCourse`? (y/n)"
+		read cfm
+		
+		if [ $cfm = "y" ]
+		then
+			sed -i "/$cid/d" aCourse #all
+			sed -i "/$cid/d" sCourse #selected 
+			echo "Successfully deleted course $cid"
+			echo
+		else
+			echo "Delete cancelled."
+			echo
+		fi
+	done
+}
+
+adds(){
+	clear
+	tput cup 0 0
+	
+	while [ 1 ]
+	do
+		echo "Enter students name and password(separated by space)..."
+		echo "Enter 0 0 to exit"
+		read usr passwd
+		
+		if [ "$usr" = "" -o "$passwd" = "" ]
+		then
+			echo "Not enough arguments. Try Again"
+			echo
+			continue;
+		fi
+	
+		if [ "$usr" = "0" -a "$passwd" = "0" ]
+		then
+			return
+		fi
+	
+	
+		if [ `grep -w "$usr:*" std | wc -l` -ne "0" ]
+		then
+			echo "Student $usr already existed.Override?(y/n) "
+			read cfm
+			if [ $cfm = "y" ]
+			then
+				sed -i "/$fname/d" std
+
+			else
+				echo "Add cancelled."
+				echo
+				continue
+			fi			
+		fi
+
+		echo "$usr:$passwd" | cat >>std
+		echo "Student added successfully"
+		echo
+	done
+	
+}
+
+dels(){
+	clear
+	tput cup 0 0
+	
+	while [ 1 ]
+	do
+		echo "Enter students name to delete, 0 to quit, -1 to list students..."
+		read name
+	
+		if [ "$name" = "0" ]
+		then
+			return
+		elif [ "$name" = "-1" ]
+		then
+			cut -d: -f1 std
+			echo
+			continue
+		elif [ "$name" = "" ]
+		then
+			echo "Name can't be empty. Try again."
+			echo
+			continue
+		fi
+		
+		if [ `grep -w "$name:*" std | wc -l` -eq 0 ]
+		then
+			echo "Student $name not found."
+			echo
+			continue
+		fi
+
+		finded=`grep -w "$name:*" std`
+		fname=`echo $finded | cut -d: -f1 `
+		echo -n "Confirm to delete student $fname?(y/n) "
+		read cfm
+		if [ $cfm = "y" ]
+		then
+			sed -i "/$fname/d" std #delete usr info
+			sed -i "/$fname/d" sCourse #delete course select info
+			echo "Successfully deleted student $fname."
+			echo
+		else
+			echo "Delete cancelled."
+			echo
+		fi
+
+	done
+}
+
+#main func
+fileCheck
+welcome
+mainMenu
+clear

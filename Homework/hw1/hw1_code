@@ -1,0 +1,49 @@
+myEcho(){
+	tput smso
+	echo $1
+	tput rmso
+}
+
+myEcho "Current Host Load is:"
+echo -e "`top -b -n 1 | head -5`"
+echo
+
+myEcho 'Listing N process(es) occupying the CPU most heavily'
+myEcho 'Enter N:'
+read N
+heading=`ps -aux | head -1`
+myEcho 'The info of those process(es) are:'
+echo $heading
+ps -aux | sed '1d' | sort -rn -k 3 | head -$N
+echo
+
+myEcho 'Enter PID to kill a process:'
+read pid
+spNum=`pstree -p $pid | grep "([0-9]*)" -o | grep "([0-9]*)" -c`
+spList=`pstree -p $pid | grep "([0-9]*)" -o`
+if [ $spNum -le 1 ]
+then
+	echo $spList
+	pstree -p $pid
+	kill -9 $pid
+	myEcho "Killing finished."
+else
+	myEcho "Killing failed. Existing subprocess(es), the following is the pstree of process $pid:"
+	pstree -p $pid
+	myEcho "Kill anyway(include subprocess(es)) [y/n]?"
+	read choice
+	if [ $choice == "y" ]
+	then
+		tput smso
+		for spid in $spList
+		do
+			spid=${spid:1:-1}
+			kill -9 $spid
+			echo "Killing process $spid finished."
+		done
+		tput rmso
+	else
+		myEcho "Kill cancelled."
+	fi
+fi
+exit
