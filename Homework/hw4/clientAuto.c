@@ -14,8 +14,8 @@ int main() {
 	printf("Input query times n:\n");
 	scanf("%d",&n);
 	pid_t pid;
-	pid = fork();
 	for(int i = 0; i < n; i++) {
+		pid = fork();
 		if(pid == 0) {
 			pid = fork();
 			if(pid == 0) {
@@ -34,6 +34,7 @@ int main() {
 				char buffer[] = "query";
 				write(clientSocket, buffer, strlen(buffer));
 				close(clientSocket);
+				exit(0);
 			}else {
 				exit(0);
 			}
