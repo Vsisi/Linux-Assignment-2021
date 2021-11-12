@@ -4,4 +4,4 @@ Assignment 2. Using Shell Scripts to Implement Menu Selection
 Assignment 3. Full-duplex Process Communication Pipeline  
 Assignment 4. Socket Messaging Test  
   
-Nothing special, just did routine assignment following requirements, no technical content.
+Shitty work, just4recording.
